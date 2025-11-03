@@ -1,3 +1,6 @@
+#![feature(let_chains)]
+#![feature(unsigned_is_multiple_of)]
+
 // Removed redundant import of ContextStore
 use anyhow::Context;
 use aya::Pod;

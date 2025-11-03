@@ -78,7 +78,7 @@ impl Metrics {
                 self.record_drop(event_type);
                 return false;
             }
-            if !count.is_multiple_of(SAMPLE_N) {
+            if count % SAMPLE_N != 0 {
                 self.record_drop(event_type);
                 return false;
             }

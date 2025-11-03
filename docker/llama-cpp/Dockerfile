@@ -12,11 +12,9 @@ RUN apt-get update && apt-get install -y \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Clone llama.cpp (pinned to stable version)
+# Clone llama.cpp (shallow clone for faster build)
 WORKDIR /build
-RUN git clone https://github.com/ggerganov/llama.cpp.git && \
-    cd llama.cpp && \
-    git checkout b4313  # Pin to known good version (Dec 2024)
+RUN git clone --depth 1 --branch master https://github.com/ggerganov/llama.cpp.git
 
 # Build llama.cpp server (CPU-only, optimized)
 WORKDIR /build/llama.cpp

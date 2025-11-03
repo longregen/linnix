@@ -3,6 +3,9 @@ version: '3.8'
 services:
   # Cognitod - eBPF monitoring daemon
   cognitod:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: linnixos/cognitod:latest
     container_name: linnix-cognitod
     privileged: true
@@ -28,6 +31,9 @@ services:
 
   # LLM Server - Serves 3B distilled model on CPU
   llama-server:
+    build:
+      context: ./docker/llama-cpp
+      dockerfile: Dockerfile
     image: linnixos/llama-cpp:latest
     container_name: linnix-llm
     volumes:

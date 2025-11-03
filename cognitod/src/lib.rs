@@ -1,3 +1,6 @@
+#![feature(let_chains)]
+#![feature(unsigned_is_multiple_of)]
+
 pub mod config;
 pub mod metrics;
 

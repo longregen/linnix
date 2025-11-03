@@ -17,8 +17,8 @@ RUN apt-get update && apt-get install -y \
 RUN rustup install nightly-2024-12-10
 RUN rustup component add rust-src --toolchain nightly-2024-12-10
 
-# Install bpf-linker
-RUN cargo install bpf-linker
+# Install bpf-linker (use specific version compatible with Rust 1.83)
+RUN cargo install bpf-linker --version 0.9.13 --locked
 
 WORKDIR /build
 
@@ -32,16 +32,20 @@ COPY linnix-ai-ebpf/linnix-ai-ebpf-ebpf/rust-toolchain.toml ./linnix-ai-ebpf/lin
 COPY cognitod/Cargo.toml ./cognitod/
 COPY linnix-cli/Cargo.toml ./linnix-cli/
 COPY linnix-reasoner/Cargo.toml ./linnix-reasoner/
-COPY xtask/Cargo.toml ./xtask/
 
 # Copy source code
 COPY . .
 
-# Build eBPF programs
-RUN cargo xtask build-ebpf --release
+# Build eBPF programs (cargo build script automatically compiles eBPF)
+WORKDIR /build/linnix-ai-ebpf/linnix-ai-ebpf-ebpf
+RUN cargo +nightly-2024-12-10 build --release --target=bpfel-unknown-none -Z build-std=core
 
 # Stage 2: Build Rust userspace binaries
 FROM rust:1.83-bookworm AS rust-builder
+
+# Install nightly for compatibility with Aya git dependency
+RUN rustup install nightly-2024-12-10
+RUN rustup default nightly-2024-12-10
 
 WORKDIR /build
 
@@ -53,7 +57,6 @@ COPY linnix-ai-ebpf/linnix-ai-ebpf-common/Cargo.toml ./linnix-ai-ebpf/linnix-ai-
 COPY cognitod/Cargo.toml ./cognitod/
 COPY linnix-cli/Cargo.toml ./linnix-cli/
 COPY linnix-reasoner/Cargo.toml ./linnix-reasoner/
-COPY xtask/Cargo.toml ./xtask/
 
 # Copy source
 COPY . .
