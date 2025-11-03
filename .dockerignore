@@ -1,0 +1,74 @@
+# Build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Docs (not needed in image)
+*.md
+!README.md
+docs/
+ROADMAP.md
+CONTRIBUTING.md
+LICENSE
+CHANGELOG.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Testing
+tests/
+**/tests/
+*.test
+
+# Enterprise/Training artifacts
+h200-distilled-model/
+training_data*/
+distillation_*.log
+runpod_migration*/
+notebooks/
+*.safetensors
+*.gguf
+*.pt
+*.pth
+
+# Models (handled separately)
+models/
+
+# Temporary files
+/tmp/
+*.tmp
+*.log
+nohup.out
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Environment
+.env*
+!.env.distilled
+
+# Database
+*.db
+*.sqlite
+
+# Docker
+docker-compose.yml
+Dockerfile
+.dockerignore

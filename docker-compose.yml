@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # Cognitod - eBPF monitoring daemon
+  cognitod:
+    image: linnixos/cognitod:latest
+    container_name: linnix-cognitod
+    privileged: true
+    network_mode: host
+    pid: host
+    volumes:
+      # Required: Kernel BTF for dynamic offset resolution
+      - /sys/kernel/btf:/sys/kernel/btf:ro
+      # Optional: Custom config
+      - ./configs:/etc/linnix:ro
+      # Optional: Persistent tag cache
+      - linnix-data:/var/lib/linnix
+    environment:
+      - RUST_LOG=info
+      - LINNIX_CONFIG=/etc/linnix/linnix.toml
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # LLM Server - Serves 3B distilled model on CPU
+  llama-server:
+    image: linnixos/llama-cpp:latest
+    container_name: linnix-llm
+    volumes:
+      - llama-models:/models
+    ports:
+      - "8090:8090"
+    command: >
+      -m /models/linnix-3b-distilled-q5_k_m.gguf
+      --host 0.0.0.0
+      --port 8090
+      --ctx-size 4096
+      -t 8
+      --log-disable
+    environment:
+      - LLAMA_ARG_N_GPU_LAYERS=0  # CPU-only mode
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Linnix Reasoner - AI analysis service (optional, can run ad-hoc)
+  # Uncomment to run as persistent service
+  # reasoner:
+  #   image: linnixos/linnix-cli:latest
+  #   container_name: linnix-reasoner
+  #   command: linnix-reasoner --host http://cognitod:3000 --continuous
+  #   environment:
+  #     - LLM_ENDPOINT=http://llama-server:8090/v1/chat/completions
+  #     - LLM_MODEL=linnix-3b-distilled
+  #   depends_on:
+  #     cognitod:
+  #       condition: service_healthy
+  #     llama-server:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+
+volumes:
+  # Persistent storage for cognitod state
+  linnix-data:
+    driver: local
+  
+  # LLM models (downloaded on first start)
+  llama-models:
+    driver: local
+
+networks:
+  default:
+    name: linnix-network

@@ -17,7 +17,27 @@ Linnix captures every process fork, exec, and exit with lightweight CPU/memory t
 - **🔓 Open Source**: Apache-2.0 license, run anywhere
 - **🚀 Production-Ready**: Battle-tested on multi-node clusters
 
-## ⚡ Quick Start (5 Minutes)
+## ⚡ Quick Start (< 5 Minutes)
+
+### 🐳 **Docker (Recommended)**
+
+```bash
+# One-line install with Docker Compose
+curl -fsSL https://raw.githubusercontent.com/linnix-os/linnix/main/quickstart.sh | bash
+
+# Or manually:
+git clone https://github.com/linnix-os/linnix.git && cd linnix
+docker-compose up -d
+
+# Get AI insights
+curl http://localhost:3000/insights | jq
+```
+
+✅ **No Rust toolchain required** | ✅ **Demo model included** | ✅ **Works on any Linux**
+
+See [Docker guide](docker/README.md) for details.
+
+### 📦 **From Source**
 
 ```bash
 # 1. Install cognitod
@@ -29,9 +49,9 @@ sudo systemctl start cognitod
 # 3. Stream live events
 linnix-cli stream
 
-# 4. Get AI insights (requires LLM endpoint)
+# 4. Get AI insights
 export LLM_ENDPOINT="http://localhost:8090/v1/chat/completions"
-export LLM_MODEL="qwen2.5-7b"
+export LLM_MODEL="linnix-3b-distilled"
 linnix-reasoner --insights
 ```
 
