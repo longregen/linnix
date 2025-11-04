@@ -20,7 +20,6 @@ We're excited to announce the first open-source release of Linnix - eBPF-powered
   - Runs on CPU (no GPU required)
   - Apache 2.0 licensed
   - **Download**: [Hugging Face Hub](https://huggingface.co/parth21shah/linnix-3b-distilled)
-  - **Download**: [Hugging Face Hub](https://huggingface.co/parth21shah/linnix-3b-distilled)
 
 ## 📥 Quick Start
 
