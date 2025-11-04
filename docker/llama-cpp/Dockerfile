@@ -17,6 +17,9 @@ RUN apt-get update && apt-get install -y \
 COPY --from=llama-base /app/llama-server /usr/local/bin/llama-server
 COPY --from=llama-base /app/*.so /usr/local/lib/
 
+# Update library cache
+RUN ldconfig
+
 # Create model directory
 RUN mkdir -p /models
 WORKDIR /models
