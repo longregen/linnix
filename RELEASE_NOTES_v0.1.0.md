@@ -14,11 +14,13 @@ We're excited to announce the first open-source release of Linnix - eBPF-powered
 
 ### AI Model (THIS RELEASE)
 - **linnix-3b-distilled-q5_k_m.gguf** (2.1 GB)
-  - Fine-tuned 3B parameter model for incident detection
+  - Distilled from fine-tuned 7B teacher model
   - Quantized to Q5_K_M for optimal size/quality balance
   - Trained on system observability incidents
   - Runs on CPU (no GPU required)
   - Apache 2.0 licensed
+  - **Download**: [Hugging Face Hub](https://huggingface.co/parth21shah/linnix-3b-distilled)
+  - **Download**: [Hugging Face Hub](https://huggingface.co/parth21shah/linnix-3b-distilled)
 
 ## 📥 Quick Start
 
@@ -43,8 +45,8 @@ curl http://localhost:3000/insights | jq
 ### Manual Installation
 
 ```bash
-# 1. Download model
-wget https://github.com/linnix-os/linnix/releases/download/v0.1.0/linnix-3b-distilled-q5_k_m.gguf -P models/
+# 1. Download model from Hugging Face
+wget https://huggingface.co/parth21shah/linnix-3b-distilled/resolve/main/linnix-3b-distilled-q5_k_m.gguf -P models/
 
 # 2. Start with Docker Compose
 docker-compose -f docker-compose.yml -f docker-compose.llm.yml up -d
@@ -234,9 +236,11 @@ See [LICENSE](LICENSE) and [FEATURE_DISTRIBUTION.md](FEATURE_DISTRIBUTION.md) fo
 - [Tokio](https://tokio.rs) - Async Rust runtime
 
 ### Model Training
-- Base model: Qwen2.5-3B (Apache 2.0)
-- Training framework: Axolotl
-- Dataset: Synthetic + curated production incidents
+- Base student model: Qwen2.5-3B-Instruct (Apache 2.0)
+- Teacher model: Fine-tuned Qwen2.5-7B on incident detection
+- Training method: Knowledge distillation
+- Training framework: Hugging Face Transformers + Axolotl
+- Dataset: Proprietary incident dataset (synthetic + production)
 
 ### Community
 - Beta testers who provided feedback

@@ -4,20 +4,21 @@ This directory contains language models for AI-powered incident detection.
 
 ## Available Models
 
-### TinyLlama 1.1B (Testing)
+### Linnix 3B Distilled (Production - **AVAILABLE NOW**)
+- **File**: `linnix-3b-distilled-q5_k_m.gguf`
+- **Size**: 2.1 GB
+- **Use Case**: Production incident detection
+- **Training**: Fine-tuned on 12K+ system observability incidents
+- **Performance**: ~30 tok/s on 8-core CPU, 92% quality vs 7B teacher
+- **License**: Apache 2.0
+- **Download**: [Hugging Face Hub](https://huggingface.co/parth21shah/linnix-3b-distilled)
+
+### TinyLlama 1.1B (Legacy Testing)
 - **File**: `tinyllama-1.1b-chat-v1.0.Q5_K_M.gguf`
 - **Size**: 747 MB
-- **Use Case**: Testing and development
+- **Use Case**: Quick testing only (not trained for incidents)
 - **Source**: [TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF](https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF)
 - **License**: Apache 2.0
-
-### Linnix 3B Distilled (Production) - Coming Soon
-- **File**: `linnix-3b-distilled-q5_k_m.gguf`
-- **Size**: ~2.1 GB
-- **Use Case**: Production incident detection
-- **Training**: Fine-tuned on system observability incidents
-- **License**: Apache 2.0
-- **Download**: Will be available in GitHub Releases
 
 ## Quick Setup
 
@@ -27,22 +28,22 @@ This directory contains language models for AI-powered incident detection.
 ```
 
 This script will:
-1. Download the TinyLlama model (800MB)
+1. Download the Linnix 3B model from Hugging Face (2.1GB)
 2. Start cognitod + llama-server with Docker Compose
 3. Verify both services are healthy
 
 ### Option 2: Manual Download
 
-**TinyLlama (for testing):**
+**Linnix 3B (production):**
 ```bash
 mkdir -p models
 cd models
-wget https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q5_K_M.gguf
+wget https://huggingface.co/parth21shah/linnix-3b-distilled/resolve/main/linnix-3b-distilled-q5_k_m.gguf
 ```
 
-**Linnix 3B (when released):**
+**TinyLlama (legacy testing only):**
 ```bash
-wget https://github.com/linnix-os/linnix/releases/download/v0.1.0/linnix-3b-distilled-q5_k_m.gguf
+wget https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q5_K_M.gguf
 ```
 
 ### Option 3: Use Custom Model

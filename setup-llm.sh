@@ -10,17 +10,17 @@ echo
 mkdir -p models
 cd models
 
-# Download TinyLlama model if not present
-MODEL_FILE="tinyllama-1.1b-chat-v1.0.Q5_K_M.gguf"
-MODEL_URL="https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/$MODEL_FILE"
+# Download Linnix 3B model if not present
+MODEL_FILE="linnix-3b-distilled-q5_k_m.gguf"
+MODEL_URL="https://huggingface.co/parth21shah/linnix-3b-distilled/resolve/main/$MODEL_FILE"
 
 if [ -f "$MODEL_FILE" ]; then
     echo "✅ Model already downloaded: $MODEL_FILE"
     ls -lh "$MODEL_FILE"
 else
-    echo "📥 Downloading TinyLlama model (750MB)..."
-    echo "   From: $MODEL_URL"
-    echo "   This may take 2-5 minutes..."
+    echo "📥 Downloading Linnix 3B model (2.1GB)..."
+    echo "   From: Hugging Face Hub"
+    echo "   This may take 5-15 minutes depending on your connection..."
     echo
     
     if command -v wget &> /dev/null; then
