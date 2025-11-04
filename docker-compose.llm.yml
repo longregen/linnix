@@ -1,0 +1,31 @@
+# Docker Compose override for LLM integration testing
+# Uses official llama.cpp image with TinyLlama 1.1B model
+#
+# Prerequisites:
+#   mkdir -p models
+#   wget https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q5_K_M.gguf -P models/
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.llm.yml up -d
+
+version: '3.8'
+
+services:
+  llama-server:
+    # Use official image directly
+    image: ghcr.io/ggerganov/llama.cpp:server
+    # Mount local models directory instead of volume
+    volumes:
+      - ./models:/models:ro
+    # Override command to use TinyLlama model
+    command:
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8090"
+      - -m
+      - /models/tinyllama-1.1b-chat-v1.0.Q5_K_M.gguf
+      - --ctx-size
+      - "2048"
+      - -t
+      - "4"

@@ -1,11 +1,14 @@
 #!/bin/bash
 set -e
 
-MODEL_PATH="/models/linnix-3b-distilled-q5_k_m.gguf"
+# Auto-detect model filename from URL
 MODEL_URL="${LINNIX_MODEL_URL:-https://github.com/linnix-os/linnix/releases/download/v0.1.0/linnix-3b-distilled-q5_k_m.gguf}"
+MODEL_FILENAME=$(basename "$MODEL_URL")
+MODEL_PATH="/models/$MODEL_FILENAME"
 
 if [ ! -f "$MODEL_PATH" ]; then
-    echo "📥 Downloading Linnix 3B model (2.1GB)..."
+    echo "📥 Downloading model: $MODEL_FILENAME"
+    echo "   From: $MODEL_URL"
     echo "   This may take a few minutes..."
     
     if command -v wget &> /dev/null; then
@@ -23,7 +26,7 @@ if [ ! -f "$MODEL_PATH" ]; then
         exit 1
     fi
     
-    echo "✅ Model downloaded successfully!"
+    echo "✅ Model downloaded successfully to $MODEL_PATH"
 else
     echo "✅ Model already present at $MODEL_PATH"
 fi
