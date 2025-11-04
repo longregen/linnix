@@ -2,10 +2,14 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
+[![Docker Pulls](https://img.shields.io/docker/pulls/linnixos/cognitod?style=flat-square)](https://github.com/linnix-os/linnix/pkgs/container/cognitod)
+[![Release](https://img.shields.io/github/v/release/linnix-os/linnix?style=flat-square)](https://github.com/linnix-os/linnix/releases)
 
 **eBPF-powered Linux observability with AI incident detection**
 
 Linnix captures every process fork, exec, and exit with lightweight CPU/memory telemetry using eBPF, then uses AI to detect incidents before they become outages.
+
+> **✨ NEW**: **linnix-3b model now available!** Download the 2.1GB quantized model from [Releases](https://github.com/linnix-os/linnix/releases/tag/v0.1.0) or use the automated setup script.
 
 > **Note**: This is the open-source version. For custom model training, advanced datasets, and enterprise features, see [Linnix Enterprise](https://linnix.io/enterprise) and [FEATURE_DISTRIBUTION.md](FEATURE_DISTRIBUTION.md).
 
@@ -19,23 +23,38 @@ Linnix captures every process fork, exec, and exit with lightweight CPU/memory t
 
 ## ⚡ Quick Start (< 5 Minutes)
 
-### 🐳 **Docker (Recommended)**
+### 🐳 **Docker with AI Model (Recommended)**
 
 ```bash
-# One-line install with Docker Compose
-curl -fsSL https://raw.githubusercontent.com/linnix-os/linnix/main/quickstart.sh | bash
-
-# Or manually:
+# Automated setup - downloads model and starts services
 git clone https://github.com/linnix-os/linnix.git && cd linnix
-docker-compose up -d
+./setup-llm.sh
 
-# Get AI insights
+# Verify services are healthy
+curl http://localhost:3000/healthz  # cognitod
+curl http://localhost:8090/health   # LLM server
+
+# Get AI-powered insights
 curl http://localhost:3000/insights | jq
 ```
 
-✅ **No Rust toolchain required** | ✅ **Demo model included** | ✅ **Works on any Linux**
+**What it does:**
+1. Downloads TinyLlama model (800MB) or linnix-3b (2.1GB)
+2. Starts cognitod (eBPF daemon) + llama-server (AI inference)
+3. Runs health checks
+4. Ready for AI insights in < 5 minutes!
 
-See [Docker guide](docker/README.md) for details.
+### 🐳 **Docker without AI (Monitoring Only)**
+
+```bash
+git clone https://github.com/linnix-os/linnix.git && cd linnix
+docker-compose up -d
+
+# Stream live process events
+curl -N http://localhost:3000/stream
+```
+
+✅ **No Rust toolchain required** | ✅ **Works on any Linux** | ✅ **< 1% CPU overhead**
 
 ### 📦 **From Source**
 
@@ -391,7 +410,17 @@ Features:
 
 Contact: sales@linnix.io
 
-## 🙏 Acknowledgments
+## � Show Your Support
+
+If Linnix helps you catch production incidents, add this badge to your README:
+
+```markdown
+[![Powered by Linnix](https://img.shields.io/badge/Powered%20by-Linnix-00C9A7?style=flat&logo=linux&logoColor=white)](https://github.com/linnix-os/linnix)
+```
+
+[![Powered by Linnix](https://img.shields.io/badge/Powered%20by-Linnix-00C9A7?style=flat&logo=linux&logoColor=white)](https://github.com/linnix-os/linnix)
+
+## �🙏 Acknowledgments
 
 Linnix is built on the shoulders of giants:
 
