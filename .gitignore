@@ -97,6 +97,13 @@ debug_llm_prompt.sh
 show_process_format.sh
 test_process_output.sh
 test_reasoner_integration.sh
+
+# Redundant scripts (consolidated into primary versions)
+setup-llm.sh          # Merged into quickstart.sh
+test-setup.sh         # Replaced by quick-test.sh
+build-image.sh        # Replaced by build-and-push-images.sh
+build-ghcr.sh         # Replaced by build-and-push-images.sh
+push-ghcr.sh          # Replaced by build-and-push-images.sh
 # Internal development scripts
 demo_reasoner_with_processes.sh
 explain_ebpf_overhead.sh
