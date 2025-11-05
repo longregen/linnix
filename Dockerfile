@@ -43,10 +43,6 @@ RUN cargo +nightly-2024-12-10 build --release --target=bpfel-unknown-none -Z bui
 # Stage 2: Build Rust userspace binaries
 FROM rust:1.83-bookworm AS rust-builder
 
-# Install nightly for compatibility with Aya git dependency
-RUN rustup install nightly-2024-12-10
-RUN rustup default nightly-2024-12-10
-
 WORKDIR /build
 
 # Copy Cargo files
