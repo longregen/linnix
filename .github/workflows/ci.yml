@@ -71,5 +71,7 @@ jobs:
           toolchain: nightly-2024-12-10
           components: rust-src, llvm-tools-preview
       - uses: Swatinem/rust-cache@v2
+      - name: Install bpf-linker
+        run: cargo install bpf-linker --no-default-features
       - name: Build eBPF artifacts
         run: cargo xtask build-ebpf
