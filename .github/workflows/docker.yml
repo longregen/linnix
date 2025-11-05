@@ -57,7 +57,9 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
+          # TODO: ARM64 support blocked by bpf-linker LLVM issues in QEMU
+          # See: https://github.com/aya-rs/bpf-linker/issues
+          platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
