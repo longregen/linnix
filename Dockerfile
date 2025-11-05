@@ -36,9 +36,10 @@ COPY linnix-reasoner/Cargo.toml ./linnix-reasoner/
 # Copy source code
 COPY . .
 
-# Build eBPF programs (cargo build script automatically compiles eBPF)
+# Build eBPF programs (uses rust-toolchain.toml for nightly selection)
+# Note: -Z build-std is configured in .cargo/config.toml, not needed here
 WORKDIR /build/linnix-ai-ebpf/linnix-ai-ebpf-ebpf
-RUN cargo +nightly-2024-12-10 build --release --target=bpfel-unknown-none -Z build-std=core
+RUN cargo build --release --target=bpfel-unknown-none
 
 # Stage 2: Build Rust userspace binaries
 FROM rust:1.90-bookworm AS rust-builder
