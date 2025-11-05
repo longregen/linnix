@@ -333,17 +333,17 @@ async fn main() -> anyhow::Result<()> {
     // Build process context string with human-readable names in table format
     let total_mem = sys.total_memory();
     let mut process_context = String::new();
-    
+
     // Build table for top 5 CPU and memory consumers
     let top_cpu_limited = top_cpu.iter().take(5).collect::<Vec<_>>();
     let top_mem_limited = top_mem.iter().take(5).collect::<Vec<_>>();
-    
+
     if !top_cpu_limited.is_empty() || !top_mem_limited.is_empty() {
         process_context.push_str("\n\nTop Resource Consumers:\n");
         process_context.push_str("┌─────────┬──────────────────────────────────────────────────────────────────┬─────────┬─────────┐\n");
         process_context.push_str("│   PID   │ Process                                                          │   CPU%  │  MEM%   │\n");
         process_context.push_str("├─────────┼──────────────────────────────────────────────────────────────────┼─────────┼─────────┤\n");
-        
+
         // Add top CPU processes
         for (pid, proc) in &top_cpu_limited {
             let mem_pct = if total_mem > 0 {
@@ -366,7 +366,7 @@ async fn main() -> anyhow::Result<()> {
             } else {
                 proc.name().to_string_lossy().to_string()
             };
-            
+
             process_context.push_str(&format!(
                 "│ {:>7} │ {:<68} │ {:>6.1}% │ {:>6.1}% │\n",
                 pid,
@@ -375,13 +375,14 @@ async fn main() -> anyhow::Result<()> {
                 mem_pct
             ));
         }
-        
+
         // Add separator before memory processes
         if !top_mem_limited.is_empty() {
             process_context.push_str("├─────────┼──────────────────────────────────────────────────────────────────┼─────────┼─────────┤\n");
-            
+
             // Add top memory processes (avoid duplicates)
-            let cpu_pids: std::collections::HashSet<_> = top_cpu_limited.iter().map(|(pid, _)| *pid).collect();
+            let cpu_pids: std::collections::HashSet<_> =
+                top_cpu_limited.iter().map(|(pid, _)| *pid).collect();
             let mut added = 0;
             for (pid, proc) in &top_mem_limited {
                 if cpu_pids.contains(pid) {
@@ -390,7 +391,7 @@ async fn main() -> anyhow::Result<()> {
                 if added >= 5 {
                     break;
                 }
-                
+
                 let mem_pct = if total_mem > 0 {
                     (proc.memory() as f64 / total_mem as f64) * 100.0
                 } else {
@@ -411,7 +412,7 @@ async fn main() -> anyhow::Result<()> {
                 } else {
                     proc.name().to_string_lossy().to_string()
                 };
-                
+
                 process_context.push_str(&format!(
                     "│ {:>7} │ {:<68} │ {:>6.1}% │ {:>6.1}% │\n",
                     pid,
@@ -422,7 +423,7 @@ async fn main() -> anyhow::Result<()> {
                 added += 1;
             }
         }
-        
+
         process_context.push_str("└─────────┴──────────────────────────────────────────────────────────────────┴─────────┴─────────┘\n");
     }
 
@@ -451,7 +452,7 @@ async fn main() -> anyhow::Result<()> {
         .endpoint
         .or_else(|| env::var("LLM_ENDPOINT").ok())
         .unwrap_or_else(|| "http://localhost:8090/v1/chat/completions".to_string());
-    
+
     // API key is optional for local models
     let api_key = args
         .api_key

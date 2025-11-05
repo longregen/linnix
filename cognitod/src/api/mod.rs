@@ -216,7 +216,7 @@ async fn status_handler(State(app_state): State<Arc<AppState>>) -> Json<StatusRe
         .map(|proc| TopCpuEntry {
             pid: proc.pid,
             comm: proc.comm,
-            cpu_percent: proc.mem_percent,  // mem_percent field holds CPU value
+            cpu_percent: proc.mem_percent, // mem_percent field holds CPU value
         })
         .collect();
     let reasoner = ReasonerStatus {
@@ -545,8 +545,9 @@ pub async fn stream_events(
                         6 => "blockio",
                         7 => "pagefault",
                         _ => "unknown",
-                    }.to_string();
-                    
+                    }
+                    .to_string();
+
                     let sse_event = ProcessEventSse {
                         pid: event.pid,
                         ppid: event.ppid,
@@ -744,16 +745,16 @@ pub async fn get_insights(
         return Err(StatusCode::SERVICE_UNAVAILABLE);
     }
     let ctx = &app_state.context;
-    
+
     // Update system snapshot on-demand for insights (critical for LLM analysis)
     ctx.update_system_snapshot();
     ctx.update_process_stats();
-    
+
     // Fetch system state
     let system = ctx.get_system_snapshot();
     // Fetch alerts (limit to top 5 for prompt brevity)
     let mut alerts = generate_alerts(ctx);
-    alerts.truncate(5);  // Only include first 5 alerts to keep prompt short
+    alerts.truncate(5); // Only include first 5 alerts to keep prompt short
 
     // Get top processes by CPU and memory
     let top_cpu = ctx.top_cpu_processes(5);
@@ -763,7 +764,8 @@ pub async fn get_insights(
     let alert_summary = if alerts.is_empty() {
         "No active alerts".to_string()
     } else {
-        alerts.iter()
+        alerts
+            .iter()
             .map(|a| format!("{}: {}", a.comm, a.reason))
             .collect::<Vec<_>>()
             .join("; ")
@@ -773,7 +775,8 @@ pub async fn get_insights(
     let top_cpu_summary = if top_cpu.is_empty() {
         "No CPU data available".to_string()
     } else {
-        top_cpu.iter()
+        top_cpu
+            .iter()
             .map(|p| format!("{} ({:.1}%)", p.comm, p.mem_percent)) // mem_percent holds CPU value
             .collect::<Vec<_>>()
             .join(", ")
@@ -783,7 +786,8 @@ pub async fn get_insights(
     let top_mem_summary = if top_rss.is_empty() {
         "No memory data available".to_string()
     } else {
-        top_rss.iter()
+        top_rss
+            .iter()
             .map(|p| format!("{} ({:.1}%)", p.comm, p.mem_percent))
             .collect::<Vec<_>>()
             .join(", ")
@@ -811,11 +815,16 @@ pub async fn get_insights(
     let model = std::env::var("LLM_MODEL").unwrap_or_else(|_| "linnix-3b-distilled".to_string());
     let llm_endpoint = std::env::var("LLM_ENDPOINT")
         .unwrap_or_else(|_| "http://localhost:8090/v1/chat/completions".to_string());
-    
+
     // API key is optional for local models
-    let api_key = std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "not-needed-for-local".to_string());
-    
-    log::info!("[insights] Using LLM endpoint: {} with model: {}", llm_endpoint, model);
+    let api_key =
+        std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "not-needed-for-local".to_string());
+
+    log::info!(
+        "[insights] Using LLM endpoint: {} with model: {}",
+        llm_endpoint,
+        model
+    );
     let req_body = serde_json::json!({
         "model": model,
         "messages": [
@@ -830,7 +839,7 @@ pub async fn get_insights(
         .post(&llm_endpoint)
         .bearer_auth(api_key)
         .json(&req_body)
-        .timeout(std::time::Duration::from_secs(120))  // 2 minutes for CPU inference
+        .timeout(std::time::Duration::from_secs(120)) // 2 minutes for CPU inference
         .send()
         .await
         .map_err(|e| {
@@ -841,8 +850,15 @@ pub async fn get_insights(
     // Check HTTP status code
     let status = res.status();
     if !status.is_success() {
-        let error_text = res.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-        log::error!("[insights] LLM returned error status {}: {}", status, error_text);
+        let error_text = res
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown error".to_string());
+        log::error!(
+            "[insights] LLM returned error status {}: {}",
+            status,
+            error_text
+        );
         let output = serde_json::json!({
             "summary": format!("LLM API error: HTTP {}", status),
             "risks": []
@@ -850,13 +866,10 @@ pub async fn get_insights(
         return Ok(Json(output));
     }
 
-    let resp_json: serde_json::Value = res
-        .json()
-        .await
-        .map_err(|e| {
-            log::error!("[insights] Failed to parse LLM response as JSON: {}", e);
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    let resp_json: serde_json::Value = res.json().await.map_err(|e| {
+        log::error!("[insights] Failed to parse LLM response as JSON: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     log::debug!("[insights] LLM response: {:?}", resp_json);
 
@@ -870,28 +883,37 @@ pub async fn get_insights(
         .to_string();
 
     // Build structured response with metrics and top processes
-    let top_cpu_data: Vec<serde_json::Value> = top_cpu.iter()
-        .map(|p| serde_json::json!({
-            "pid": p.pid,
-            "comm": p.comm,
-            "cpu_percent": format!("{:.1}", p.mem_percent) // mem_percent field holds CPU value
-        }))
+    let top_cpu_data: Vec<serde_json::Value> = top_cpu
+        .iter()
+        .map(|p| {
+            serde_json::json!({
+                "pid": p.pid,
+                "comm": p.comm,
+                "cpu_percent": format!("{:.1}", p.mem_percent) // mem_percent field holds CPU value
+            })
+        })
         .collect();
 
-    let top_rss_data: Vec<serde_json::Value> = top_rss.iter()
-        .map(|p| serde_json::json!({
-            "pid": p.pid,
-            "comm": p.comm,
-            "mem_percent": format!("{:.1}", p.mem_percent)
-        }))
+    let top_rss_data: Vec<serde_json::Value> = top_rss
+        .iter()
+        .map(|p| {
+            serde_json::json!({
+                "pid": p.pid,
+                "comm": p.comm,
+                "mem_percent": format!("{:.1}", p.mem_percent)
+            })
+        })
         .collect();
 
-    let alerts_data: Vec<serde_json::Value> = alerts.iter()
-        .map(|a| serde_json::json!({
-            "comm": a.comm,
-            "reason": a.reason,
-            "pid": a.pid
-        }))
+    let alerts_data: Vec<serde_json::Value> = alerts
+        .iter()
+        .map(|a| {
+            serde_json::json!({
+                "comm": a.comm,
+                "reason": a.reason,
+                "pid": a.pid
+            })
+        })
         .collect();
 
     let output = serde_json::json!({

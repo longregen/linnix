@@ -294,9 +294,10 @@ fn tag_cache_path() -> std::path::PathBuf {
 
 fn parse_tag_response(body: &str) -> anyhow::Result<Vec<String>> {
     if let Ok(chat_resp) = serde_json::from_str::<ChatResponse>(body)
-        && let Some(choice) = chat_resp.choices.first() {
-            return parse_tag_content(&choice.message.content);
-        }
+        && let Some(choice) = chat_resp.choices.first()
+    {
+        return parse_tag_content(&choice.message.content);
+    }
     parse_tag_content(body)
 }
 

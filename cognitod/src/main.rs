@@ -651,13 +651,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let log_path = PathBuf::from(path);
             tokio::spawn(async move {
                 if let Some(parent) = log_path.parent()
-                    && let Err(err) = tokio::fs::create_dir_all(parent).await {
-                        warn!(
-                            "[cognitod] failed to create incident log directory {:?}: {}",
-                            parent, err
-                        );
-                        return;
-                    }
+                    && let Err(err) = tokio::fs::create_dir_all(parent).await
+                {
+                    warn!(
+                        "[cognitod] failed to create incident log directory {:?}: {}",
+                        parent, err
+                    );
+                    return;
+                }
                 let file = match OpenOptions::new()
                     .create(true)
                     .append(true)
@@ -802,13 +803,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
             // Only update when system is active (events/sec >= reasoner threshold)
             let eps = metrics_clone.events_per_sec();
             let is_active = eps >= reasoner_cfg.min_eps_to_enable;
-            
+
             if is_active {
                 ctx_clone.update_system_snapshot();
                 let snap = ctx_clone.get_system_snapshot();
                 handlers_clone.on_snapshot(&snap).await;
             }
-            
+
             sleep(Duration::from_secs(5)).await;
         }
     });
@@ -822,11 +823,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             // Only update when system is active (events/sec >= reasoner threshold)
             let eps = metrics_clone.events_per_sec();
             let is_active = eps >= reasoner_cfg.min_eps_to_enable;
-            
+
             if is_active {
                 ctx_clone.update_process_stats();
             }
-            
+
             sleep(Duration::from_secs(5)).await;
         }
     });

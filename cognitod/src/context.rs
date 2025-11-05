@@ -78,19 +78,22 @@ impl ContextStore {
                 0 => {
                     // Exec: enrich tags before inserting
                     if event.tags.is_empty()
-                        && let Some(mut tags) = derive_cgroup_tags(event.pid) {
-                            event.tags.append(&mut tags);
-                        }
+                        && let Some(mut tags) = derive_cgroup_tags(event.pid)
+                    {
+                        event.tags.append(&mut tags);
+                    }
                     event.set_exit_time(None);
                     live.insert(event.pid, event.clone());
                 }
                 1 => {
                     event.set_exit_time(None);
                     // Fork: only compute tags if we're inserting this PID for the first time
-                    if !live.contains_key(&event.pid) && event.tags.is_empty()
-                        && let Some(mut tags) = derive_cgroup_tags(event.pid) {
-                            event.tags.append(&mut tags);
-                        }
+                    if !live.contains_key(&event.pid)
+                        && event.tags.is_empty()
+                        && let Some(mut tags) = derive_cgroup_tags(event.pid)
+                    {
+                        event.tags.append(&mut tags);
+                    }
                     live.entry(event.pid).or_insert_with(|| event.clone());
                 }
                 2 => {
@@ -237,7 +240,7 @@ impl ContextStore {
                 Some(ProcessMemorySummary {
                     pid: proc.pid,
                     comm: comm_to_string(&proc.comm),
-                    mem_percent: cpu,  // Reusing struct field for CPU
+                    mem_percent: cpu, // Reusing struct field for CPU
                 })
             })
             .collect();
@@ -327,7 +330,6 @@ impl ContextStore {
             }
         }
     }
-
 }
 
 /// Extract lightweight container/cgroup tags for a PID from /proc/<pid>/cgroup.
@@ -335,15 +337,21 @@ impl ContextStore {
 fn derive_cgroup_tags(pid: u32) -> Option<Vec<String>> {
     use std::fs;
     let path = format!("/proc/{pid}/cgroup");
-    let Ok(contents) = fs::read_to_string(&path) else { return None; };
+    let Ok(contents) = fs::read_to_string(&path) else {
+        return None;
+    };
     let mut tags: Vec<String> = Vec::new();
 
     // Collect all cgroup path components; format: "hier:id:path"
     for line in contents.lines() {
         let path_part = line.split(':').nth(2).unwrap_or("");
-        if path_part.is_empty() { continue; }
+        if path_part.is_empty() {
+            continue;
+        }
         for comp in path_part.split('/') {
-            if comp.is_empty() { continue; }
+            if comp.is_empty() {
+                continue;
+            }
             let lc = comp.to_lowercase();
             // Systemd slices
             if lc.ends_with(".slice") {
@@ -366,8 +374,12 @@ fn derive_cgroup_tags(pid: u32) -> Option<Vec<String>> {
             }
             // Kubernetes pod UID markers: "pod<uid>" variants
             if let Some(idx) = lc.find("pod") {
-                let uid = &lc[idx+3..];
-                let uid_short = uid.chars().filter(|c| c.is_ascii_hexdigit() || *c == '-').take(20).collect::<String>();
+                let uid = &lc[idx + 3..];
+                let uid_short = uid
+                    .chars()
+                    .filter(|c| c.is_ascii_hexdigit() || *c == '-')
+                    .take(20)
+                    .collect::<String>();
                 if !uid_short.is_empty() {
                     tags.push(format!("k8s_pod:{}", uid_short));
                 }
@@ -380,7 +392,9 @@ fn derive_cgroup_tags(pid: u32) -> Option<Vec<String>> {
     }
 
     // De-duplicate while preserving order
-    if tags.is_empty() { return None; }
+    if tags.is_empty() {
+        return None;
+    }
     let mut seen = std::collections::HashSet::new();
     tags.retain(|t| seen.insert(t.clone()));
     Some(tags)

@@ -76,16 +76,16 @@ fn current_epoch_secs() -> u64 {
 
 fn ensure_parent(path: &Path) -> std::io::Result<()> {
     if let Some(parent) = path.parent()
-        && !parent.as_os_str().is_empty() {
-            std::fs::create_dir_all(parent)?;
-        }
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)?;
+    }
     Ok(())
 }
 
 fn append_record(path: &Path, record: &InsightRecord) -> std::io::Result<()> {
     let mut file = OpenOptions::new().create(true).append(true).open(path)?;
-    let line = serde_json::to_string(record)
-        .map_err(std::io::Error::other)?;
+    let line = serde_json::to_string(record).map_err(std::io::Error::other)?;
     file.write_all(line.as_bytes())?;
     file.write_all(b"\n")?;
     Ok(())
