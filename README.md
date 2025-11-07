@@ -217,6 +217,9 @@ sudo cp target/release/linnix-reasoner /usr/local/bin/
 - [Hugging Face Model](https://huggingface.co/parth21shah/linnix-3b-distilled) - AI model documentation
 - [PERFORMANCE.md](PERFORMANCE.md) - Proving the <1% CPU overhead claim
 - [ROADMAP.md](ROADMAP.md) - Future development plans
+- [COMPARISON.md](docs/COMPARISON.md) - Detailed Prometheus/Datadog/Elastic trade-offs
+- [HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md) - eBPF probes, BTF offsets, and AI loop internals
+- [FAQ.md](docs/FAQ.md) - Kernel support, overhead, and privacy answers
 
 Full documentation: [docs.linnix.io](https://docs.linnix.io)
 

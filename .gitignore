@@ -131,9 +131,14 @@ scripts/upload_finetuned_to_runpod.sh
 RELEASE_NOTES_*.md
 
 # Internal documentation directory (most content is internal/proprietary)
-docs/
+docs/*
 # BUT keep public images
 !docs/images/
+docs/images/README.md
+# Allow selected public docs
+!docs/COMPARISON.md
+!docs/HOW_IT_WORKS.md
+!docs/FAQ.md
 
 # Environment files with secrets
 .env
