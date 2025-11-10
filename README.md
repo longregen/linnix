@@ -12,7 +12,7 @@
 
 **eBPF-powered Linux observability with AI incident detection**
 
-Linnix captures every process fork, exec, and exit with lightweight CPU/memory telemetry using eBPF, then uses AI to detect incidents before they become outages.
+Linnix captures every process fork, exec, and exit with lightweight CPU/memory telemetry using eBPF. Works standalone with built-in rules engine, or add AI for natural language insights.
 
 > **✨ NEW**: **linnix-3b model now available!** Download the 2.1GB quantized model from [Releases](https://github.com/linnix-os/linnix/releases/tag/v0.1.0) or use the automated setup script.
 
@@ -21,9 +21,10 @@ Linnix captures every process fork, exec, and exit with lightweight CPU/memory t
 **Traditional monitoring tells you "CPU is high". Linnix tells you WHY and WHAT TO DO.**
 
 - **⚡ Zero Overhead**: <1% CPU usage with eBPF probes (vs 5-15% for traditional agents)
-- **🧠 AI-Powered**: Natural language insights - "Fork storm in cron job. Add rate limit to /etc/cron.d/backup"
+- **🧠 AI-Powered (Optional)**: Natural language insights - "Fork storm in cron job. Add rate limit to /etc/cron.d/backup"
+- **🎯 Works Without AI**: Built-in rules engine detects incidents out-of-the-box
 - **💰 Cost-Effective**: 60-80% cheaper than Datadog or Dynatrace, runs on your infrastructure
-- **🔓 Open Source**: Apache-2.0 license, no vendor lock-in, BYO LLM
+- **🔓 Open Source**: Apache-2.0 license, no vendor lock-in, BYO LLM (or none)
 - **🚀 Production-Ready**: Battle-tested on multi-node clusters, kernel 5.8+
 
 ### 📊 How We Compare
@@ -40,6 +41,8 @@ Linnix captures every process fork, exec, and exit with lightweight CPU/memory t
 | **BYO LLM** | ✅ Any model | N/A | ❌ No | ❌ No |
 
 **Bottom line**: We're Prometheus for process lifecycle + AI reasoning layer. Use both!
+
+> **💡 Note**: AI is **optional**! Linnix works out-of-the-box with its built-in rules engine for detecting fork storms, CPU spikes, and runaway processes. Add AI later for natural language explanations.
 
 ### 🎯 **One-Command Setup (New!)**
 
@@ -80,7 +83,7 @@ curl http://localhost:3000/insights | jq  # Get AI insights
 3. Runs health checks
 4. Ready for AI insights in < 5 minutes!
 
-### 🐳 **Docker without AI (Monitoring Only)**
+### 🐳 **Docker without AI (Rules Engine Only)**
 
 ```bash
 git clone https://github.com/linnix-os/linnix.git && cd linnix
@@ -88,9 +91,12 @@ docker-compose up -d
 
 # Stream live process events
 curl -N http://localhost:3000/stream
+
+# Get incident alerts from rules engine
+curl http://localhost:3000/insights | jq
 ```
 
-✅ **No Rust toolchain required** | ✅ **Works on any Linux** | ✅ **< 1% CPU overhead**
+✅ **No AI/LLM required** | ✅ **No Rust toolchain required** | ✅ **Works on any Linux** | ✅ **< 1% CPU overhead**
 
 ### 📦 **From Source**
 
@@ -139,15 +145,15 @@ linnix-reasoner --insights
 
 ## 📊 Features
 
-Linnix provides comprehensive eBPF-based monitoring with AI-powered incident detection:
+Linnix provides comprehensive eBPF-based monitoring with optional AI-powered incident detection:
 
 - ✅ **eBPF monitoring** - Kernel-level process lifecycle tracking
 - ✅ **Real-time event streaming** - SSE endpoints for live data
 - ✅ **Process tree tracking** - Full ancestry and lineage graphs  
 - ✅ **CPU/memory telemetry** - Lightweight resource monitoring
-- ✅ **Local rules engine** - Customizable incident patterns
+- ✅ **Local rules engine** - Detects fork storms, CPU spikes, runaway processes (no AI needed)
 - ✅ **Prometheus integration** - Standard metrics export
-- ✅ **LLM inference** - Bring your own model (OpenAI, local, etc.)
+- ✅ **LLM inference (optional)** - Bring your own model for natural language insights (OpenAI, local, etc.)
 - ✅ **Training examples** - 50+ curated incident samples included
 
 ## 🚀 Installation
