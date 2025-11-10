@@ -80,6 +80,7 @@ serve_distilled_model.sh
 .env.distilled
 
 # Internal documentation (development notes, not for release)
+ROADMAP.md
 MIGRATION_PLAN.md
 MIGRATION_EXECUTION_REPORT.md
 FEATURE_DISTRIBUTION.md
