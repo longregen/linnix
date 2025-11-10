@@ -1,0 +1,45 @@
+<?xml version="1.0" ?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bgGrad)"/>
+  <g>
+    <rect x="100" y="300" width="200" height="200" fill="#1e293b" stroke="#48bb78" stroke-width="6" rx="24"/>
+    <text x="200" y="440" font-family="Arial Black, sans-serif" font-size="120" font-weight="bold" fill="#48bb78" text-anchor="middle">L</text>
+  </g>
+  <text x="100" y="600" font-family="Arial Black, sans-serif" font-size="120" font-weight="bold" fill="#f8fafc">Linnix</text>
+  <text x="100" y="700" font-family="Arial, sans-serif" font-size="56" fill="#48bb78" font-weight="bold">eBPF + AI Observability</text>
+  <g>
+    <rect x="100" y="760" width="280" height="60" fill="#22c55e" rx="8"/>
+    <text x="240" y="800" font-family="Arial Black, sans-serif" font-size="32" font-weight="bold" fill="#0f172a" text-anchor="middle">OPEN SOURCE</text>
+  </g>
+  <g>
+    <rect x="900" y="200" width="900" height="680" fill="#0d1117" stroke="#30363d" stroke-width="4" rx="12"/>
+    <rect x="900" y="200" width="900" height="50" fill="#161b22" rx="12"/>
+    <circle cx="930" cy="225" r="10" fill="#ff5f56"/>
+    <circle cx="960" cy="225" r="10" fill="#ffbd2e"/>
+    <circle cx="990" cy="225" r="10" fill="#27c93f"/>
+    <text x="930" y="290" font-family="Monaco, Courier New, monospace" font-size="32" fill="#8b949e" font-weight="normal">$ curl localhost:3000/insights</text>
+    <text x="930" y="340" font-family="Monaco, Courier New, monospace" font-size="32" fill="#48bb78" font-weight="normal">{</text>
+    <text x="930" y="390" font-family="Monaco, Courier New, monospace" font-size="32" fill="#48bb78" font-weight="normal">  &quot;class&quot;: &quot;fork_storm&quot;,</text>
+    <text x="930" y="440" font-family="Monaco, Courier New, monospace" font-size="32" fill="#48bb78" font-weight="normal">  &quot;confidence&quot;: 0.89,</text>
+    <text x="930" y="490" font-family="Monaco, Courier New, monospace" font-size="32" fill="#fbbf24" font-weight="normal">  &quot;why&quot;: &quot;Detected 127 forks/sec&quot;,</text>
+    <text x="930" y="540" font-family="Monaco, Courier New, monospace" font-size="32" fill="#48bb78" font-weight="normal">  &quot;actions&quot;: [</text>
+    <text x="930" y="590" font-family="Monaco, Courier New, monospace" font-size="32" fill="#f687b3" font-weight="normal">    &quot;Add rate limit to cron&quot;</text>
+    <text x="930" y="640" font-family="Monaco, Courier New, monospace" font-size="32" fill="#48bb78" font-weight="normal">  ]</text>
+    <text x="930" y="690" font-family="Monaco, Courier New, monospace" font-size="32" fill="#48bb78" font-weight="normal">}</text>
+    <text x="930" y="770" font-family="Monaco, Courier New, monospace" font-size="36" fill="#22c55e" font-weight="bold">✅ Incident detected in &lt;30s</text>
+  </g>
+  <g>
+    <rect x="0" y="960" width="1920" height="120" fill="#0f172a" opacity="0.95"/>
+    <text x="960" y="1030" font-family="Arial Black, sans-serif" font-size="48" fill="#f8fafc" text-anchor="middle" font-weight="bold">github.com/linnix-os/linnix</text>
+  </g>
+  <g>
+    <rect x="1720" y="80" width="140" height="60" fill="#dc2626" rx="8"/>
+    <text x="1790" y="122" font-family="Arial Black, sans-serif" font-size="36" font-weight="bold" fill="white" text-anchor="middle">2:00</text>
+  </g>
+</svg>
