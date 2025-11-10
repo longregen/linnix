@@ -167,6 +167,7 @@ docker run -d \
   --pid=host \
   --network=host \
   -v /sys/kernel/btf:/sys/kernel/btf:ro \
+  -v /sys/kernel/debug:/sys/kernel/debug:ro \
   linnixos/cognitod:latest
 ```
 
