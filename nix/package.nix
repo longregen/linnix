@@ -11,6 +11,7 @@
 , makeWrapper
 , fetchFromGitHub
 , fetchCrate
+, bpf-linker
 }:
 
 let
@@ -35,27 +36,20 @@ let
       clang
       llvm
       pkg-config
+      bpf-linker  # Use bpf-linker from nixpkgs
     ];
 
     buildInputs = [
       libelf
       zlib
-      openssl
     ];
 
     buildPhase = ''
       export LIBCLANG_PATH="${llvm}/lib"
       export CARGO_HOME=$(mktemp -d cargo-home)
-      export HOME=$(mktemp -d home)
 
-      # Install bpf-linker using cargo
-      echo "Installing bpf-linker..."
-      cargo install bpf-linker --version 0.9.13 --locked --root $CARGO_HOME
-
-      # Add to PATH
-      export PATH="$CARGO_HOME/bin:$PATH"
-
-      # Verify installation
+      # Verify bpf-linker is available
+      echo "Using bpf-linker from nixpkgs:"
       which bpf-linker
       bpf-linker --version
 
