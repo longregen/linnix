@@ -14,13 +14,32 @@
 
 let
   # Nightly Rust for eBPF compilation
+  # Note: bpfel-unknown-none target is built from rust-src, not pre-packaged
   nightlyRust = rust-bin.nightly."2024-12-10".minimal.override {
     extensions = [ "rust-src" ];
-    targets = [ "bpfel-unknown-none" ];
   };
 
   # Stable Rust for userspace
   stableRust = rust-bin.stable.latest.default;
+
+  # Build bpf-linker separately
+  bpf-linker = rustPlatform.buildRustPackage rec {
+    pname = "bpf-linker";
+    version = "0.9.13";
+
+    src = pkgs.fetchCrate {
+      inherit pname version;
+      hash = "sha256-1w/q37agFiXEGOxxVa5uqRTjvg5TgJI7cj7EvTF9Ce4=";
+    };
+
+    cargoHash = "sha256-cgvbTVXpEjV+uFjKf/MqLp3NiPPE7bN61vG30ztHPuA=";
+
+    buildInputs = [ llvm ];
+    nativeBuildInputs = [ llvm ];
+
+    # Tests require LLVM shared library
+    doCheck = false;
+  };
 
   # Build eBPF programs separately
   ebpfPrograms = stdenv.mkDerivation {
@@ -34,6 +53,7 @@ let
       clang
       llvm
       pkg-config
+      bpf-linker
     ];
 
     buildInputs = [
