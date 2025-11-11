@@ -87,8 +87,7 @@ rustPlatform.buildRustPackage rec {
     lockFile = ../Cargo.lock;
     outputHashes = {
       # Git dependency from https://github.com/aya-rs/aya
-      # Hash obtained from build output
-      "aya-0.13.1" = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      "aya-0.13.1" = "sha256-ZzV6CkvBXPKenD+UkIc6V29bVf+zicHMY77gwuxpi30=";
     };
   };
 
