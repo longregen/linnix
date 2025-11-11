@@ -77,6 +77,9 @@
             echo "Run 'cargo build --release' to build userspace binaries"
           '';
         };
+
+        # Formatter for `nix fmt`
+        formatter = pkgs.nixpkgs-fmt;
       }
     ) // {
       # NixOS module (system-independent)

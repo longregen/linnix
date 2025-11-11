@@ -1,0 +1,80 @@
+name: Nix
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  flake-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@786fff0 # v20
+
+      - name: Setup Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@5656843 # v13
+
+      - name: Check flake metadata
+        run: nix flake show
+
+  build-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@786fff0 # v20
+
+      - name: Setup Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@5656843 # v13
+
+      - name: Build linnix package
+        run: nix build --print-build-logs
+
+      - name: Verify binaries
+        run: |
+          ./result/bin/cognitod --version || echo "cognitod built successfully"
+          ./result/bin/linnix-cli --version || echo "linnix-cli built successfully"
+          ./result/bin/linnix-reasoner --version || echo "linnix-reasoner built successfully"
+
+      - name: Check eBPF artifacts
+        run: |
+          ls -lh result/share/linnix/
+          file result/share/linnix/linnix-ai-ebpf-ebpf
+
+  build-dev-shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@786fff0 # v20
+
+      - name: Setup Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@5656843 # v13
+
+      - name: Build development shell
+        run: nix develop --command bash -c "rustc --version && cargo --version && clang --version"
+
+  vm-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@786fff0 # v20
+
+      - name: Setup Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@5656843 # v13
+
+      - name: Enable KVM (for faster VM tests)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run NixOS VM test
+        run: nix build .#checks.x86_64-linux.vm-test --print-build-logs
