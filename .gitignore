@@ -103,6 +103,11 @@ ultrathink.prompt.md
 # Claude Code Skills (personal development workflows)
 .claude/
 
+# Nix
+result
+result-*
+.direnv/
+
 # Debug/temporary scripts
 debug_llm_prompt.sh
 show_process_format.sh

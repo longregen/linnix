@@ -1,6 +1,7 @@
 # Linnix
 
 [![CI](https://github.com/linnix-os/linnix/actions/workflows/docker.yml/badge.svg)](https://github.com/linnix-os/linnix/actions/workflows/docker.yml)
+[![Nix](https://github.com/linnix-os/linnix/actions/workflows/nix.yml/badge.svg)](https://github.com/linnix-os/linnix/actions/workflows/nix.yml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Docker Pulls](https://img.shields.io/docker/pulls/linnixos/cognitod?style=flat-square)](https://github.com/linnix-os/linnix/pkgs/container/cognitod)
 [![GitHub Stars](https://img.shields.io/github/stars/linnix-os/linnix?style=social)](https://github.com/linnix-os/linnix)
@@ -172,6 +173,8 @@ timeout_secs = 120
 
 ## Installation from Source
 
+### Traditional Build
+
 ```bash
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -187,6 +190,21 @@ sudo cp target/release/cognitod /usr/local/bin/
 sudo cp target/release/linnix-cli /usr/local/bin/
 sudo cp target/release/linnix-reasoner /usr/local/bin/
 ```
+
+### Nix/NixOS
+
+```bash
+# Try without installing
+nix run github:linnix-os/linnix
+
+# Install with Nix
+nix profile install github:linnix-os/linnix
+
+# Or add to NixOS configuration
+services.linnix.enable = true;
+```
+
+See [nix/README.md](nix/README.md) for full NixOS module documentation.
 
 ## Contributing
 
