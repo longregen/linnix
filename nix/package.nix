@@ -29,7 +29,8 @@ let
     pname = "linnix-ebpf";
     version = "0.1.0";
 
-    src = ../linnix-ai-ebpf;
+    # Use the entire source tree to have access to workspace root
+    src = lib.cleanSource ../.;
 
     nativeBuildInputs = [
       nightlyRust
@@ -53,13 +54,13 @@ let
       command -v bpf-linker
       bpf-linker --version
 
-      cd linnix-ai-ebpf-ebpf
+      cd linnix-ai-ebpf/linnix-ai-ebpf-ebpf
       cargo build --release --target=bpfel-unknown-none
     '';
 
     installPhase = ''
       mkdir -p $out
-      cp target/bpfel-unknown-none/release/linnix-ai-ebpf-ebpf $out/
+      cp linnix-ai-ebpf/linnix-ai-ebpf-ebpf/target/bpfel-unknown-none/release/linnix-ai-ebpf-ebpf $out/
     '';
   };
 
