@@ -30,7 +30,7 @@ let
 
     src = fetchCrate {
       inherit pname version;
-      hash = "sha256-1w/q37agFiXEGOxxVa5uqRTjvg5TgJI7cj7EvTF9Ce4=";
+      hash = "sha256-n22whdmlfZIO9Rj/Fl8CJzYRDMyuRpy56O+kkubtTzY=";
     };
 
     cargoHash = "sha256-cgvbTVXpEjV+uFjKf/MqLp3NiPPE7bN61vG30ztHPuA=";
