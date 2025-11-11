@@ -33,7 +33,7 @@ let
       hash = "sha256-n22whdmlfZIO9Rj/Fl8CJzYRDMyuRpy56O+kkubtTzY=";
     };
 
-    cargoHash = "sha256-cgvbTVXpEjV+uFjKf/MqLp3NiPPE7bN61vG30ztHPuA=";
+    cargoHash = "sha256-xituV7mVEoADHroo6wKE9kvb4QSAc7RCYZprd9MAYoI=";
 
     buildInputs = [ llvm ];
     nativeBuildInputs = [ llvm ];
