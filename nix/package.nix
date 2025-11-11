@@ -46,11 +46,11 @@ let
 
     buildPhase = ''
       export LIBCLANG_PATH="${llvm}/lib"
-      export CARGO_HOME=$(mktemp -d cargo-home)
+      export CARGO_HOME=$(mktemp -d)
 
       # Verify bpf-linker is available
       echo "Using bpf-linker from nixpkgs:"
-      which bpf-linker
+      command -v bpf-linker
       bpf-linker --version
 
       cd linnix-ai-ebpf-ebpf
