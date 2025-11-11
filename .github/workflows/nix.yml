@@ -1,0 +1,52 @@
+name: Nix Build
+
+on:
+  pull_request:
+  push:
+    branches: [main, "claude/add-nix-*"]
+
+jobs:
+  nix-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+
+      - name: Configure Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Check flake
+        run: nix flake check --show-trace
+
+      - name: Build linnix-ebpf
+        run: nix build .#linnix-ebpf --print-build-logs
+
+      - name: Build linnix
+        run: nix build .#linnix --print-build-logs
+
+      - name: Run tests
+        run: nix flake check --print-build-logs
+
+  nix-dev-shell:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+
+      - name: Configure Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Test dev shell
+        run: |
+          nix develop --command bash -c "
+            echo 'Testing dev shell environment...'
+            rustc --version
+            cargo --version
+            bpf-linker --version
+          "
