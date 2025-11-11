@@ -10,6 +10,7 @@
 , openssl
 , makeWrapper
 , fetchFromGitHub
+, fetchCrate
 }:
 
 let
@@ -27,7 +28,7 @@ let
     pname = "bpf-linker";
     version = "0.9.13";
 
-    src = pkgs.fetchCrate {
+    src = fetchCrate {
       inherit pname version;
       hash = "sha256-1w/q37agFiXEGOxxVa5uqRTjvg5TgJI7cj7EvTF9Ce4=";
     };
