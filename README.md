@@ -172,6 +172,8 @@ timeout_secs = 120
 
 ## Installation from Source
 
+### Traditional Build
+
 ```bash
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -187,6 +189,21 @@ sudo cp target/release/cognitod /usr/local/bin/
 sudo cp target/release/linnix-cli /usr/local/bin/
 sudo cp target/release/linnix-reasoner /usr/local/bin/
 ```
+
+### Nix/NixOS
+
+```bash
+# Try without installing
+nix run github:linnix-os/linnix
+
+# Install with Nix
+nix profile install github:linnix-os/linnix
+
+# Or add to NixOS configuration
+services.linnix.enable = true;
+```
+
+See [nix/README.md](nix/README.md) for full NixOS module documentation.
 
 ## Contributing
 
