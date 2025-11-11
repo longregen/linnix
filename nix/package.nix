@@ -23,25 +23,6 @@ let
   # Stable Rust for userspace
   stableRust = rust-bin.stable.latest.default;
 
-  # Build bpf-linker separately
-  bpf-linker = rustPlatform.buildRustPackage rec {
-    pname = "bpf-linker";
-    version = "0.9.13";
-
-    src = fetchCrate {
-      inherit pname version;
-      hash = "sha256-n22whdmlfZIO9Rj/Fl8CJzYRDMyuRpy56O+kkubtTzY=";
-    };
-
-    cargoHash = "sha256-xituV7mVEoADHroo6wKE9kvb4QSAc7RCYZprd9MAYoI=";
-
-    buildInputs = [ llvm ];
-    nativeBuildInputs = [ llvm ];
-
-    # Tests require LLVM shared library
-    doCheck = false;
-  };
-
   # Build eBPF programs separately
   ebpfPrograms = stdenv.mkDerivation {
     pname = "linnix-ebpf";
@@ -54,17 +35,29 @@ let
       clang
       llvm
       pkg-config
-      bpf-linker
     ];
 
     buildInputs = [
       libelf
       zlib
+      openssl
     ];
 
     buildPhase = ''
       export LIBCLANG_PATH="${llvm}/lib"
-      export CARGO_HOME=$(mktemp -d)
+      export CARGO_HOME=$(mktemp -d cargo-home)
+      export HOME=$(mktemp -d home)
+
+      # Install bpf-linker using cargo
+      echo "Installing bpf-linker..."
+      cargo install bpf-linker --version 0.9.13 --locked --root $CARGO_HOME
+
+      # Add to PATH
+      export PATH="$CARGO_HOME/bin:$PATH"
+
+      # Verify installation
+      which bpf-linker
+      bpf-linker --version
 
       cd linnix-ai-ebpf-ebpf
       cargo build --release --target=bpfel-unknown-none
