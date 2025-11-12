@@ -94,6 +94,37 @@ The rules engine can alert on these patterns. The AI reasoner (experimental) att
 
 **Current testing status:** Built and tested in local Docker environments. Rules engine works for basic pattern detection. AI reasoning is experimental and depends heavily on model quality. Not yet tested at scale or in production environments.
 
+## Testing
+
+The codebase includes 35+ automated tests covering:
+
+**eBPF Event Detection:**
+- Fork storm detection (rapid process spawning)
+- Fork burst patterns
+- Process lifecycle tracking (fork → exec → exit)
+
+**Rules Engine:**
+- Pattern matching for forks/sec, CPU usage, memory growth
+- Alert cooldown and deduplication
+- YAML/TOML configuration parsing
+
+**API & Integration:**
+- HTTP/SSE streaming endpoints
+- Prometheus metrics export
+- CLI alert processing
+- Install/uninstall scripts
+
+Run tests:
+```bash
+# Unit and integration tests
+cargo test --workspace
+
+# Including fork storm detection tests
+cargo test --features fake-events
+```
+
+All tests passing as of last commit. CI runs these on every push.
+
 ## Requirements
 
 - Linux kernel 5.8+ with BTF support
