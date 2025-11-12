@@ -125,6 +125,24 @@ cargo test --features fake-events
 
 All tests passing as of last commit. CI runs these on every push.
 
+## Demo Scenarios
+
+Want to see Linnix catch real issues? Run the demo scenarios that trigger actual failures:
+
+```bash
+# Run all 3 scenarios: memory leak, fork bomb, FD exhaustion
+docker-compose -f docker-compose-demo.yml --profile demo up
+```
+
+**What you'll see:**
+- Memory leak detected 15 seconds before OOM killer
+- Fork storm caught at 48 forks/second
+- File descriptor exhaustion warned at 120/256 FDs
+
+Each scenario runs in an isolated container and triggers real resource exhaustion. Linnix alerts before they cause failures.
+
+See [scenarios/README.md](scenarios/README.md) for details on each scenario and how to run them individually.
+
 ## Requirements
 
 - Linux kernel 5.8+ with BTF support
