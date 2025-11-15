@@ -225,31 +225,47 @@ install_linnix_binaries() {
         # Build from source
         log info "Building from source..."
 
-        # Ensure cargo is in PATH and environment is loaded
-        if [ -n "$SUDO_USER" ]; then
-            export PATH="/home/$SUDO_USER/.cargo/bin:$PATH"
-            [ -f "/home/$SUDO_USER/.cargo/env" ] && . "/home/$SUDO_USER/.cargo/env"
-        else
-            export PATH="$HOME/.cargo/bin:$PATH"
-            [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
-        fi
-
         TEMP_DIR=$(mktemp -d)
         cd "$TEMP_DIR"
 
         git clone "https://github.com/${GITHUB_REPO}.git" .
 
-        # Build eBPF programs using xtask
-        log info "Building eBPF programs..."
-        cargo xtask build-ebpf --release
+        # Build as the sudo user if available, otherwise as current user
+        if [ -n "$SUDO_USER" ]; then
+            # Change ownership of temp dir to sudo user
+            chown -R "$SUDO_USER:$SUDO_USER" "$TEMP_DIR"
+
+            # Run build commands as sudo user
+            sudo -u "$SUDO_USER" bash -c "
+                cd '$TEMP_DIR'
+                export PATH=\"/home/$SUDO_USER/.cargo/bin:\$PATH\"
+                . \"/home/$SUDO_USER/.cargo/env\"
+
+                # Build eBPF programs using xtask
+                echo '[INFO] Building eBPF programs...'
+                cargo xtask build-ebpf --release
+
+                # Build userspace binaries
+                echo '[INFO] Building userspace binaries...'
+                cargo build --release -p cognitod
+                cargo build --release -p linnix-cli
+            "
+        else
+            export PATH="$HOME/.cargo/bin:$PATH"
+            [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
+            # Build eBPF programs using xtask
+            log info "Building eBPF programs..."
+            cargo xtask build-ebpf --release
+
+            # Build userspace binaries
+            log info "Building userspace binaries..."
+            cargo build --release -p cognitod
+            cargo build --release -p linnix-cli
+        fi
 
         # Copy eBPF artifacts
         cp target/bpfel-unknown-none/release/linnix-ai-ebpf-ebpf "$SHARE_DIR/"
-
-        # Build userspace binaries
-        log info "Building userspace binaries..."
-        cargo build --release -p cognitod
-        cargo build --release -p linnix-cli
 
         # Install binaries
         cp target/release/cognitod "$INSTALL_DIR/"
