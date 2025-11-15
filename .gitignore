@@ -144,6 +144,7 @@ docs/images/README.md
 !docs/COMPARISON.md
 !docs/HOW_IT_WORKS.md
 !docs/FAQ.md
+!docs/AWS_EC2_DEPLOYMENT.md
 
 # Environment files with secrets
 .env
@@ -261,3 +262,4 @@ UI_DASHBOARD_TEST_PLAN.md
 UI_DASHBOARD_TEST_RESULTS.md
 youtube/quickstart-video/output/final-video.mp3
 youtube/quickstart-video/output/final-video1.mp4
+PHASE2_SUMMARY.md
