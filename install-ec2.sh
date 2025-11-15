@@ -271,6 +271,7 @@ install_linnix_binaries() {
         # For now, since this is a new project, fall back to build mode
         log warn "Pre-built binaries not yet available, building from source..."
         DEV_MODE=true
+        install_dependencies  # Install build tools now that DEV_MODE is true
         install_rust
         install_linnix_binaries
         return
