@@ -39,6 +39,7 @@ impl LocalIlmHandlerRag {
         kb: Option<KbIndex>,
         context: Arc<ContextStore>,
         insights: Arc<InsightStore>,
+        enforcement: Option<Arc<crate::enforcement::EnforcementQueue>>,
     ) -> Option<Self> {
         if !cfg.enabled {
             metrics.set_ilm_enabled(false);
@@ -95,6 +96,7 @@ impl LocalIlmHandlerRag {
                 kb_index,
                 context_clone,
                 insights_worker,
+                enforcement,
             )
             .await;
         });
@@ -128,6 +130,7 @@ struct WindowSummary {
     primary_ppid: Option<u32>,
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn run_worker(
     mut rx: mpsc::Receiver<ProcessEvent>,
     cfg: ReasonerConfig,
@@ -136,6 +139,7 @@ async fn run_worker(
     kb: Option<Arc<KbIndex>>,
     context: Arc<ContextStore>,
     insights: Arc<InsightStore>,
+    enforcement: Option<Arc<crate::enforcement::EnforcementQueue>>,
 ) {
     let mut buffer: Vec<ProcessEvent> = Vec::new();
     let mut ticker = tokio::time::interval(Duration::from_secs(cfg.window_seconds.max(1)));
@@ -247,6 +251,21 @@ async fn run_worker(
                         use std::fmt::Write as _;
                         let _ = write!(telemetry_prompt, " load={:.2},{:.2},{:.2}", snap.load_avg[0], snap.load_avg[1], snap.load_avg[2]);
                     }
+                    // PSI (Pressure Stall Information) - the KEY signal for circuit breaking
+                    // High CPU% + High PSI = thrashing (KILL). High CPU% + Low PSI = efficient (KEEP).
+                    // Only include non-zero PSI values to keep prompt concise
+                    {
+                        use std::fmt::Write as _;
+                        if snap.psi_cpu_some_avg10 > 0.0 {
+                            let _ = write!(telemetry_prompt, " psi_cpu={:.1}", snap.psi_cpu_some_avg10);
+                        }
+                        if snap.psi_memory_full_avg10 > 0.0 {
+                            let _ = write!(telemetry_prompt, " psi_mem_full={:.1}", snap.psi_memory_full_avg10);
+                        }
+                        if snap.psi_io_some_avg10 > 0.0 {
+                            let _ = write!(telemetry_prompt, " psi_io={:.1}", snap.psi_io_some_avg10);
+                        }
+                    }
                     if pf_count > 0 {
                         use std::fmt::Write as _;
                         let _ = write!(telemetry_prompt, " pf={}", pf_count);
@@ -338,7 +357,7 @@ async fn run_worker(
                         match parse_and_validate(&response) {
                             Ok(insight) => {
                                 debug!("[local-ilm] raw insight response: {}", response);
-                                emit_insight(&insight, &metrics, insights.as_ref());
+                                emit_insight(&insight, &metrics, insights.as_ref(), &enforcement);
                                 last_insight = Some(insight.clone());
                                 metrics.set_ilm_enabled(true);
                                 metrics.set_ilm_disabled_reason(None);
@@ -371,7 +390,7 @@ async fn run_worker(
                                         match parse_and_validate(&fix_response) {
                                             Ok(insight) => {
                                                 parsed_fix = Some(insight.clone());
-                                                emit_insight(&insight, &metrics, insights.as_ref());
+                                                emit_insight(&insight, &metrics, insights.as_ref(), &enforcement);
                                                 last_insight = Some(insight);
                                                 metrics.set_ilm_enabled(true);
                                                 metrics.set_ilm_disabled_reason(None);
@@ -397,7 +416,7 @@ async fn run_worker(
                                         warn!(
                                             "[local-ilm] falling back to last known insight due to parse error"
                                         );
-                                        emit_insight(&insight, &metrics, insights.as_ref());
+                                        emit_insight(&insight, &metrics, insights.as_ref(), &enforcement);
                                         metrics.set_ilm_enabled(true);
                                         metrics
                                             .set_ilm_disabled_reason(Some("fallback_last_insight".to_string()));
@@ -621,7 +640,12 @@ fn build_followup_prompt(
     )
 }
 
-fn emit_insight(insight: &Insight, metrics: &Metrics, store: &InsightStore) {
+fn emit_insight(
+    insight: &Insight,
+    metrics: &Metrics,
+    store: &InsightStore,
+    enforcement: &Option<Arc<crate::enforcement::EnforcementQueue>>,
+) {
     let class = insight.class.as_str();
     info!(
         "[local-ilm] insight class={} confidence={:.2} why={} actions={:?}",
@@ -632,6 +656,38 @@ fn emit_insight(insight: &Insight, metrics: &Metrics, store: &InsightStore) {
         metrics.inc_alerts_emitted();
     }
     store.record(insight.clone());
+
+    if let Some(queue) = enforcement {
+        for action_str in &insight.actions {
+            if let Some(pid) = parse_kill_action(action_str) {
+                let queue_clone = queue.clone();
+                let reason = insight.why.clone();
+                let confidence = insight.confidence;
+                tokio::spawn(async move {
+                    if let Err(e) = queue_clone
+                        .propose(
+                            crate::enforcement::ActionType::KillProcess { pid, signal: 9 },
+                            reason,
+                            "llm".to_string(),
+                            Some(confidence),
+                        )
+                        .await
+                    {
+                        log::warn!("[enforcement] rejected proposal: {}", e);
+                    }
+                });
+            }
+        }
+    }
+}
+
+fn parse_kill_action(action: &str) -> Option<u32> {
+    let parts: Vec<&str> = action.split_whitespace().collect();
+    if parts.first() == Some(&"kill") || parts.first() == Some(&"Kill") {
+        parts.last()?.parse().ok()
+    } else {
+        None
+    }
 }
 
 fn log_once(last_error: &mut Option<String>, message: String) {
@@ -746,6 +802,7 @@ mod tests {
             None,
             Arc::clone(&context),
             Arc::clone(&insight_store),
+            None,
         )
         .await
         .expect("handler should initialize");

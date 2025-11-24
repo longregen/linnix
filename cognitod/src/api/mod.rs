@@ -35,10 +35,11 @@ use crate::context::ContextStore;
 #[cfg(feature = "fake-events")]
 use crate::fake_events;
 use crate::handler::local_ilm::schema::insight_json_schema;
-use crate::insights::{InsightRecord, InsightStore};
+use crate::insights::{InsightRecord, InsightStore as InsightsStore};
 use crate::metrics::Metrics;
 use crate::types::ProcessAlert;
 use crate::types::SystemSnapshot;
+use cognitod::{Incident, IncidentStats, IncidentStore};
 use linnix_ai_ebpf_common::EventType;
 use sysinfo::{Pid, System};
 use tokio::sync::broadcast;
@@ -1268,6 +1269,69 @@ async fn get_insight_schema_route() -> Json<Value> {
     Json(insight_json_schema().clone())
 }
 
+async fn get_actions(
+    State(state): State<Arc<AppState>>,
+) -> Json<Vec<crate::enforcement::EnforcementAction>> {
+    if let Some(queue) = &state.enforcement {
+        let all = queue.get_all().await;
+        Json(all)
+    } else {
+        Json(vec![])
+    }
+}
+
+async fn get_action_by_id(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> Result<Json<crate::enforcement::EnforcementAction>, StatusCode> {
+    if let Some(queue) = &state.enforcement {
+        queue
+            .get_by_id(&id)
+            .await
+            .map(Json)
+            .ok_or(StatusCode::NOT_FOUND)
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
+}
+
+#[derive(Deserialize)]
+struct ApprovalRequest {
+    approver: String,
+}
+
+async fn approve_action(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(req): Json<ApprovalRequest>,
+) -> Result<Json<crate::enforcement::EnforcementAction>, StatusCode> {
+    if let Some(queue) = &state.enforcement {
+        queue
+            .approve(&id, req.approver)
+            .await
+            .map(Json)
+            .map_err(|_| StatusCode::BAD_REQUEST)
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
+}
+
+async fn reject_action(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(req): Json<ApprovalRequest>,
+) -> Result<StatusCode, StatusCode> {
+    if let Some(queue) = &state.enforcement {
+        queue
+            .reject(&id, req.approver)
+            .await
+            .map(|_| StatusCode::OK)
+            .map_err(|_| StatusCode::BAD_REQUEST)
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
+}
+
 #[derive(Serialize)]
 struct DropBreakdown {
     event_type: u32,
@@ -1567,7 +1631,7 @@ pub struct AppState {
     pub context: Arc<ContextStore>,
     pub metrics: Arc<Metrics>,
     pub alerts: Option<broadcast::Sender<Alert>>,
-    pub insights: Arc<InsightStore>,
+    pub insights: Arc<InsightsStore>,
     pub offline: Arc<OfflineGuard>,
     pub transport: &'static str,
     pub probe_state: ProbeState,
@@ -1575,6 +1639,8 @@ pub struct AppState {
     pub prometheus_enabled: bool,
     pub alert_history: Arc<AlertHistory>,
     pub auth_token: Option<String>,
+    pub enforcement: Option<Arc<crate::enforcement::EnforcementQueue>>,
+    pub incident_store: Option<Arc<IncidentStore>>,
 }
 
 pub fn all_routes(app_state: Arc<AppState>) -> Router {
@@ -1599,10 +1665,18 @@ pub fn all_routes(app_state: Arc<AppState>) -> Router {
         .route("/alerts/{id}", get(get_alert_by_id))
         .route("/insights", get(get_insights))
         .route("/insights/recent", get(get_recent_insights))
+        .route("/incidents", get(get_incidents))
+        .route("/incidents/summary", get(get_incident_summary))
+        .route("/incidents/stats", get(get_incident_stats))
+        .route("/incidents/{id}", get(get_incident_by_id))
         .route("/metrics", get(metrics_handler))
         .route("/status", get(status_handler))
         .route("/healthz", get(healthz))
-        .route("/schema/insight", get(get_insight_schema_route));
+        .route("/schema/insight", get(get_insight_schema_route))
+        .route("/actions", get(get_actions))
+        .route("/actions/{id}", get(get_action_by_id))
+        .route("/actions/{id}/approve", axum::routing::post(approve_action))
+        .route("/actions/{id}/reject", axum::routing::post(reject_action));
 
     if prometheus_enabled {
         router = router.route("/metrics/prometheus", get(prometheus_metrics));
@@ -1659,6 +1733,144 @@ fn dependency_version(target: &str) -> Option<String> {
         return current_version;
     }
     None
+}
+
+// ========================================
+// Incident API Endpoints
+// ========================================
+
+#[derive(Deserialize)]
+#[allow(dead_code)]
+struct IncidentQueryParams {
+    #[serde(default = "default_limit")]
+    limit: i64,
+    #[serde(default)]
+    event_type: Option<String>,
+    #[serde(default)]
+    analyzed: Option<bool>,
+}
+
+fn default_limit() -> i64 {
+    10
+}
+
+/// GET /incidents - List recent incidents
+async fn get_incidents(
+    Query(params): Query<IncidentQueryParams>,
+    State(app): State<Arc<AppState>>,
+) -> Result<Json<Vec<Incident>>, (StatusCode, String)> {
+    let store = app.incident_store.as_ref().ok_or_else(|| {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Incident store not available".to_string(),
+        )
+    })?;
+
+    let incidents = store
+        .recent(params.limit)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // Filter by analyzed status if requested
+    let filtered = if let Some(analyzed) = params.analyzed {
+        incidents
+            .into_iter()
+            .filter(|i| analyzed == i.llm_analysis.is_some())
+            .collect()
+    } else {
+        incidents
+    };
+
+    Ok(Json(filtered))
+}
+
+/// GET /incidents/:id - Get incident by ID
+async fn get_incident_by_id(
+    Path(id): Path<i64>,
+    State(app): State<Arc<AppState>>,
+) -> Result<Json<Incident>, (StatusCode, String)> {
+    let store = app.incident_store.as_ref().ok_or_else(|| {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Incident store not available".to_string(),
+        )
+    })?;
+
+    let incident = store
+        .get(id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .ok_or_else(|| (StatusCode::NOT_FOUND, "Incident not found".to_string()))?;
+
+    Ok(Json(incident))
+}
+
+/// GET /incidents/stats - Get incident statistics
+async fn get_incident_stats(
+    State(app): State<Arc<AppState>>,
+) -> Result<Json<IncidentStats>, (StatusCode, String)> {
+    let store = app.incident_store.as_ref().ok_or_else(|| {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Incident store not available".to_string(),
+        )
+    })?;
+
+    let stats = store
+        .stats()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Json(stats))
+}
+
+#[derive(Serialize)]
+struct IncidentSummary {
+    total: u64,
+    analyzed: u64,
+    pending_analysis: u64,
+    by_event_type: std::collections::HashMap<String, u64>,
+    recent: Vec<Incident>,
+}
+
+/// GET /incidents/summary - Get comprehensive incident summary
+async fn get_incident_summary(
+    State(app): State<Arc<AppState>>,
+) -> Result<Json<IncidentSummary>, (StatusCode, String)> {
+    let store = app.incident_store.as_ref().ok_or_else(|| {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Incident store not available".to_string(),
+        )
+    })?;
+
+    let stats = store
+        .stats()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let recent = store
+        .recent(10)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let analyzed = recent.iter().filter(|i| i.llm_analysis.is_some()).count() as u64;
+    let pending = recent.len() as u64 - analyzed;
+
+    let mut by_event_type = std::collections::HashMap::new();
+    for incident in &recent {
+        *by_event_type
+            .entry(incident.event_type.clone())
+            .or_insert(0) += 1;
+    }
+
+    Ok(Json(IncidentSummary {
+        total: stats.total,
+        analyzed,
+        pending_analysis: pending,
+        by_event_type,
+        recent,
+    }))
 }
 
 #[cfg(test)]
@@ -1755,10 +1967,12 @@ mod tests {
             offline: Arc::new(OfflineGuard::new(false)),
             transport: "perf",
             probe_state: ProbeState::disabled(),
+            enforcement: None,
             reasoner: ReasonerConfig::default(),
             prometheus_enabled: false,
             alert_history: Arc::new(AlertHistory::new(16)),
             auth_token: None,
+            incident_store: None,
         });
         let Json(resp) = super::status_handler(State(app_state)).await;
         let val = serde_json::to_value(resp).unwrap();
@@ -1800,10 +2014,12 @@ mod tests {
                 rss_probe: RssProbeMode::CoreMm,
                 btf_available: true,
             },
+            enforcement: None,
             reasoner: ReasonerConfig::default(),
             prometheus_enabled: false,
             alert_history: Arc::new(AlertHistory::new(16)),
             auth_token: None,
+            incident_store: None,
         });
 
         let Json(resp) = super::metrics_handler(State(app_state)).await;
@@ -1843,10 +2059,12 @@ mod tests {
             offline: Arc::new(OfflineGuard::new(false)),
             transport: "perf",
             probe_state: ProbeState::disabled(),
+            enforcement: None,
             reasoner: ReasonerConfig::default(),
             prometheus_enabled: false,
             alert_history: Arc::new(AlertHistory::new(16)),
             auth_token: None,
+            incident_store: None,
         });
         let router = super::all_routes(Arc::clone(&app_state));
         let response = router
@@ -1874,10 +2092,12 @@ mod tests {
             offline: Arc::new(OfflineGuard::new(false)),
             transport: "perf",
             probe_state: ProbeState::disabled(),
+            enforcement: None,
             reasoner: ReasonerConfig::default(),
             prometheus_enabled: true,
             alert_history: Arc::new(AlertHistory::new(16)),
             auth_token: None,
+            incident_store: None,
         });
         let router = super::all_routes(Arc::clone(&app_state));
         let response = router
@@ -1919,10 +2139,12 @@ mod tests {
             offline: Arc::new(OfflineGuard::new(false)),
             transport: "perf",
             probe_state: ProbeState::disabled(),
+            enforcement: None,
             reasoner: ReasonerConfig::default(),
             prometheus_enabled: false,
             alert_history: Arc::new(AlertHistory::new(16)),
             auth_token: None,
+            incident_store: None,
         });
         let router = super::all_routes(app_state);
         let response = router
@@ -1949,9 +2171,11 @@ mod tests {
             offline: Arc::new(OfflineGuard::new(false)),
             transport: "perf",
             probe_state: ProbeState::disabled(),
+            enforcement: None,
             reasoner: ReasonerConfig::default(),
             prometheus_enabled: false,
             alert_history: Arc::new(AlertHistory::new(16)),
+            incident_store: None,
             auth_token: Some("secret123".to_string()),
         });
         let router = super::all_routes(app_state);
@@ -1979,9 +2203,11 @@ mod tests {
             offline: Arc::new(OfflineGuard::new(false)),
             transport: "perf",
             probe_state: ProbeState::disabled(),
+            enforcement: None,
             reasoner: ReasonerConfig::default(),
             prometheus_enabled: false,
             alert_history: Arc::new(AlertHistory::new(16)),
+            incident_store: None,
             auth_token: Some("secret123".to_string()),
         });
         let router = super::all_routes(app_state);
@@ -2010,9 +2236,11 @@ mod tests {
             offline: Arc::new(OfflineGuard::new(false)),
             transport: "perf",
             probe_state: ProbeState::disabled(),
+            enforcement: None,
             reasoner: ReasonerConfig::default(),
             prometheus_enabled: false,
             alert_history: Arc::new(AlertHistory::new(16)),
+            incident_store: None,
             auth_token: Some("secret123".to_string()),
         });
         let router = super::all_routes(app_state);
@@ -2041,9 +2269,11 @@ mod tests {
             offline: Arc::new(OfflineGuard::new(false)),
             transport: "perf",
             probe_state: ProbeState::disabled(),
+            enforcement: None,
             reasoner: ReasonerConfig::default(),
             prometheus_enabled: false,
             alert_history: Arc::new(AlertHistory::new(16)),
+            incident_store: None,
             auth_token: Some("secret123".to_string()),
         });
         let router = super::all_routes(app_state);
