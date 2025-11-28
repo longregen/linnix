@@ -17,10 +17,7 @@ services:
   # Security: root + minimal caps (CAP_BPF + CAP_PERFMON only)
   cognitod:
     image: ghcr.io/linnix-os/cognitod:latest
-    # Fallback: build locally if image pull fails
-    build:
-      context: .
-      dockerfile: Dockerfile
+    pull_policy: always
     container_name: linnix-cognitod
 
     network_mode: host
@@ -30,9 +27,15 @@ services:
     cap_add:
       - BPF
       - PERFMON
+      - SYS_ADMIN
+    
+    ulimits:
+      memlock: -1
 
     security_opt:
       - no-new-privileges:true
+      # - apparmor:unconfined
+      # - seccomp:unconfined
 
     read_only: true
     tmpfs:
@@ -42,6 +45,7 @@ services:
     volumes:
       - /sys/kernel/btf:/sys/kernel/btf:ro
       - /sys/kernel/debug:/sys/kernel/debug:ro
+      - /sys/fs/bpf:/sys/fs/bpf:rw
       - ./configs:/etc/linnix:ro
       - linnix-data:/var/lib/linnix:rw
 
@@ -84,24 +88,6 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
       interval: 15s
       timeout: 10s
-      retries: 3
-      start_period: 60s
-
-  # Web Dashboard
-  dashboard:
-    image: nginx:alpine
-    container_name: linnix-dashboard
-    network_mode: host
-    volumes:
-      - ./dashboard:/usr/share/nginx/html:ro
-      - ./dashboard/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - cognitod
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
-      interval: 10s
-      timeout: 5s
       retries: 3
 
 volumes:
