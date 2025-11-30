@@ -6,6 +6,28 @@ use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tokio::time::sleep;
 
+#[derive(Debug, Clone, Deserialize, serde::Serialize, PartialEq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum Priority {
+    Critical,
+    High,
+    #[default]
+    Medium,
+    Low,
+}
+
+impl From<&str> for Priority {
+    fn from(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "critical" => Self::Critical,
+            "high" => Self::High,
+            "medium" => Self::Medium,
+            "low" => Self::Low,
+            _ => Self::Medium,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, serde::Serialize)]
 pub struct K8sMetadata {
     pub pod_name: String,
@@ -13,6 +35,8 @@ pub struct K8sMetadata {
     pub container_name: String,
     pub owner_kind: Option<String>,
     pub owner_name: Option<String>,
+    pub priority: Priority,
+    pub slo_tier: Option<String>,
 }
 
 pub struct K8sContext {
@@ -26,13 +50,21 @@ pub struct K8sContext {
 
 impl K8sContext {
     pub fn new() -> Option<Arc<Self>> {
-        let host = std::env::var("KUBERNETES_SERVICE_HOST").ok()?;
-        let port = std::env::var("KUBERNETES_SERVICE_PORT").ok()?;
-        let api_url = format!("https://{}:{}", host, port);
-
-        let token =
-            std::fs::read_to_string("/var/run/secrets/kubernetes.io/serviceaccount/token").ok()?;
-        let ca_cert = std::fs::read("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt").ok()?;
+        let (api_url, token, ca_cert) = if let (Ok(url), Ok(t)) =
+            (std::env::var("K8S_API_URL"), std::env::var("K8S_TOKEN"))
+        {
+            // Local/Manual mode
+            (url, t, None)
+        } else {
+            // In-cluster mode
+            let host = std::env::var("KUBERNETES_SERVICE_HOST").ok()?;
+            let port = std::env::var("KUBERNETES_SERVICE_PORT").ok()?;
+            let url = format!("https://{}:{}", host, port);
+            let t = std::fs::read_to_string("/var/run/secrets/kubernetes.io/serviceaccount/token")
+                .ok()?;
+            let ca = std::fs::read("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt").ok()?;
+            (url, t, Some(ca))
+        };
 
         // Try to get node name from env (downward API) or hostname
         let node_name = std::env::var("NODE_NAME")
@@ -40,10 +72,15 @@ impl K8sContext {
             .or_else(|| std::env::var("HOSTNAME").ok())
             .unwrap_or_else(|| "localhost".to_string());
 
-        let client = Client::builder()
-            .add_root_certificate(reqwest::Certificate::from_pem(&ca_cert).ok()?)
-            .build()
-            .ok()?;
+        let mut builder = Client::builder();
+        if let Some(ca) = ca_cert {
+            builder = builder.add_root_certificate(reqwest::Certificate::from_pem(&ca).ok()?);
+        } else {
+            // In local mode, we might be using self-signed certs (like kind)
+            builder = builder.danger_accept_invalid_certs(true);
+        }
+
+        let client = builder.build().ok()?;
 
         Some(Arc::new(Self {
             container_map: RwLock::new(HashMap::new()),
@@ -99,6 +136,17 @@ impl K8sContext {
                 (None, None)
             };
 
+            let (priority, slo_tier) = if let Some(labels) = &pod.metadata.labels {
+                let p = labels
+                    .get("linnix.dev/priority")
+                    .map(|s| Priority::from(s.as_str()))
+                    .unwrap_or_default();
+                let s = labels.get("linnix.dev/slo-tier").cloned();
+                (p, s)
+            } else {
+                (Priority::default(), None)
+            };
+
             if let Some(statuses) = pod.status.container_statuses {
                 for status in statuses {
                     if let Some(container_id) = status.container_id {
@@ -112,6 +160,8 @@ impl K8sContext {
                                     container_name: status.name.clone(),
                                     owner_kind: owner_kind.clone(),
                                     owner_name: owner_name.clone(),
+                                    priority: priority.clone(),
+                                    slo_tier: slo_tier.clone(),
                                 },
                             );
                         } else if let Some(stripped) = container_id.strip_prefix("docker://") {
@@ -123,6 +173,8 @@ impl K8sContext {
                                     container_name: status.name.clone(),
                                     owner_kind: owner_kind.clone(),
                                     owner_name: owner_name.clone(),
+                                    priority: priority.clone(),
+                                    slo_tier: slo_tier.clone(),
                                 },
                             );
                         }
@@ -191,6 +243,7 @@ struct PodMetadata {
     namespace: Option<String>,
     #[serde(rename = "ownerReferences")]
     owner_references: Option<Vec<OwnerReference>>,
+    labels: Option<HashMap<String, String>>,
 }
 
 #[derive(Deserialize)]
@@ -210,4 +263,32 @@ struct ContainerStatus {
     name: String,
     #[serde(rename = "containerID")]
     container_id: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_priority_parsing() {
+        assert_eq!(Priority::from("critical"), Priority::Critical);
+        assert_eq!(Priority::from("High"), Priority::High);
+        assert_eq!(Priority::from("MEDIUM"), Priority::Medium);
+        assert_eq!(Priority::from("low"), Priority::Low);
+        assert_eq!(Priority::from("unknown"), Priority::Medium);
+    }
+
+    #[test]
+    fn test_priority_serialization() {
+        assert_eq!(
+            serde_json::to_string(&Priority::Critical).unwrap(),
+            "\"critical\""
+        );
+        assert_eq!(serde_json::to_string(&Priority::High).unwrap(), "\"high\"");
+        assert_eq!(
+            serde_json::to_string(&Priority::Medium).unwrap(),
+            "\"medium\""
+        );
+        assert_eq!(serde_json::to_string(&Priority::Low).unwrap(), "\"low\"");
+    }
 }
